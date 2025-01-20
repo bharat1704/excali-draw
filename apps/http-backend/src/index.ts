@@ -18,7 +18,7 @@ app.post("/signup", async (req, res)=> {
     }
 
     try {
-        await prismaClient.user.create({
+        const user = await prismaClient.user.create({
             data:{
             email: parsedData.data?.username,
             password: parsedData.data.password,
@@ -26,7 +26,7 @@ app.post("/signup", async (req, res)=> {
                 } 
         })
 
-        res.json({userId: "123"})
+        res.json({userId: user.id})
     } catch(e){
         res.status(411).json({ msg:"user already exists" })
 
@@ -37,36 +37,56 @@ app.post("/signup", async (req, res)=> {
 
 //sign in end point
 
-app.post("/signin", (req, res)=>{
+app.post("/signin", async(req, res)=>{
 
-    const data = SignInSchema.safeParse(req.body)
-    if(!data.success){
-    res.json({
-        msg:"incorrect input"
-    })
+    const parsedDatadata = SignInSchema.safeParse(req.body)
+
+        if(!parsedDatadata.success) {
+            res.json({ msg:"incorrect input"  })
+            return;
+            }
+            const user = await prismaClient.user.findUnique({
+                where:{
+                    email:parsedDatadata.data.username,
+                    //need to hash the password
+                    password:parsedDatadata.data.password   
+                }
+            })
+                if(!user){
+
+                    res.status(403).json({msg:"Not authorized"})
+                    return;               
+                }    
+
+                const token = jwt.sign({ userId:user?.id },JWT_SECRET)
+                res.json({token})
+
+})
+
+app.post("/create-room", middleware, async(req, res)=>{
+ //db call
+    const parsedDatadata = CreateRoomSchema.safeParse(req.body)
+    if(!parsedDatadata.success){
+    res.json({   msg:"incorrect input" })
     return;
     }
+    //@ts-ignore
+    const userId = req.userId;
+try{
+        const room = await prismaClient.room.create({
+            data:{
+            slug:parsedDatadata.data.name,
+            adminId: userId
+            }
+        })
 
-    const userId = 1;
-    const token = jwt.sign({ userId },JWT_SECRET)
-    res.json({token})
+    res.json({ roomId: room.id })
+    
+}catch(e){
+    res.status(403).json({msg:"already exits"})
+}
 
 })
 
-app.post("/create-room", middleware,(req, res)=>{
- //db call
- const data = CreateRoomSchema.safeParse(req.body)
- if(!data.success){
- res.json({
-     msg:"incorrect input"
- })
- return;
- }
 
-
-res.json({ roomId: 123 })
-})
-
-
-
-app.listen(3005);
+app.listen(3006);
