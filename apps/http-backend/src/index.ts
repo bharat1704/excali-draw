@@ -67,7 +67,7 @@ app.post("/create-room", middleware, async(req, res)=>{
  //db call
     const parsedDatadata = CreateRoomSchema.safeParse(req.body)
     if(!parsedDatadata.success){
-    res.json({   msg:"incorrect input" })
+    res.json({  msg:"incorrect input" })
     return;
     }
     //@ts-ignore
